@@ -48,7 +48,7 @@ export async function getCategories(): Promise<Category[]> {
   });
 
   const data = await response.json();
-  return data as Category[];
+  return data.filter((item: Category) => item.type === "expense") as Category[];
 }
 
 export async function getTags(): Promise<Tag[]> {
@@ -59,7 +59,7 @@ export async function getTags(): Promise<Tag[]> {
     },
   });
   const data = await response.json();
-  return data as Tag[];
+  return data.filter((item: Tag) => item.type === "expense") as Tag[];
 }
 
 export function getDateRange() {
