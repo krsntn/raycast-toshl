@@ -32,11 +32,14 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
 
   useEffect(() => {
     const loadCachedData = async () => {
-      const cachedCategories = await LocalStorage.getItem<string>("categories");
+      const [cachedCategories, cachedTags] = await Promise.all([
+        LocalStorage.getItem<string>("categories"),
+        LocalStorage.getItem<string>("tags"),
+      ]);
+
       if (cachedCategories) {
         setCategories(JSON.parse(cachedCategories));
       }
-      const cachedTags = await LocalStorage.getItem<string>("tags");
       if (cachedTags) {
         setTags(JSON.parse(cachedTags));
       }
@@ -44,11 +47,11 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
 
     const syncData = async () => {
       try {
-        const categories = await getCategories();
+        const [categories, tags] = await Promise.all([getCategories(), getTags()]);
+
         setCategories(categories);
         await LocalStorage.setItem("categories", JSON.stringify(categories));
 
-        const tags = await getTags();
         setTags(tags);
         await LocalStorage.setItem("tags", JSON.stringify(tags));
       } catch (error) {
@@ -131,21 +134,25 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
         defaultValue={data ? Math.abs(data.amount).toString() : ""}
         ref={amountRef}
       />
-      <Form.Dropdown
-        id="category"
-        title="Category"
-        defaultValue={data?.category || categories.find((c) => c.name.startsWith("Food"))?.id}
-        ref={categoryRef}
-      >
-        {categories.map((category) => (
-          <Form.Dropdown.Item key={category.id} value={category.id} title={category.name} />
-        ))}
-      </Form.Dropdown>
-      <Form.TagPicker id="tags" title="Tags" defaultValue={data?.tags} ref={tagsRef}>
-        {tags.map((tag) => (
-          <Form.TagPicker.Item key={tag.id} value={tag.id} title={tag.name} />
-        ))}
-      </Form.TagPicker>
+      {categories.length > 0 ? (
+        <Form.Dropdown
+          id="category"
+          title="Category"
+          defaultValue={data?.category || categories.find((c) => c.name.startsWith("Food"))?.id}
+          ref={categoryRef}
+        >
+          {categories.map((category) => (
+            <Form.Dropdown.Item key={category.id} value={category.id} title={category.name} />
+          ))}
+        </Form.Dropdown>
+      ) : null}
+      {tags.length > 0 ? (
+        <Form.TagPicker id="tags" title="Tags" defaultValue={data?.tags} ref={tagsRef}>
+          {tags.map((tag) => (
+            <Form.TagPicker.Item key={tag.id} value={tag.id} title={tag.name} />
+          ))}
+        </Form.TagPicker>
+      ) : null}
       <Form.TextArea
         id="desc"
         title="Description"
@@ -153,12 +160,14 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
         defaultValue={data?.desc}
         ref={descRef}
       />
-      <Form.DatePicker
-        id="date"
-        title="Date"
-        defaultValue={data ? new Date(data.date) : new Date()}
-        type={Form.DatePicker.Type.Date}
-      />
+      {categories.length > 0 || tags.length > 0 ? (
+        <Form.DatePicker
+          id="date"
+          title="Date"
+          defaultValue={data ? new Date(data.date) : new Date()}
+          type={Form.DatePicker.Type.Date}
+        />
+      ) : null}
     </Form>
   );
 }
