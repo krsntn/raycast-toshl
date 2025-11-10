@@ -22,8 +22,7 @@ interface AddExpenseFormValues {
 
 export default function AddExpense({ data }: { data?: Entry | undefined }) {
   const { pop } = useNavigation();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [options, setOptions] = useState<{ categories: Category[]; tags: Tag[] }>({ categories: [], tags: [] });
 
   const amountRef = useRef<Form.TextField>(null);
   const categoryRef = useRef<Form.Dropdown>(null);
@@ -37,22 +36,21 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
         LocalStorage.getItem<string>("tags"),
       ]);
 
-      if (cachedCategories) {
-        setCategories(JSON.parse(cachedCategories));
-      }
-      if (cachedTags) {
-        setTags(JSON.parse(cachedTags));
-      }
+      setOptions({
+        categories: JSON.parse(cachedCategories ?? "[]"),
+        tags: JSON.parse(cachedTags ?? "[]"),
+      });
     };
 
     const syncData = async () => {
       try {
         const [categories, tags] = await Promise.all([getCategories(), getTags()]);
 
-        setCategories(categories);
+        setOptions({
+          categories,
+          tags,
+        });
         await LocalStorage.setItem("categories", JSON.stringify(categories));
-
-        setTags(tags);
         await LocalStorage.setItem("tags", JSON.stringify(tags));
       } catch (error) {
         showToast({
@@ -125,48 +123,46 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
           <Action.SubmitForm title="Submit" onSubmit={handleSubmit} />
         </ActionPanel>
       }
-      isLoading={categories.length === 0 || tags.length === 0}
+      isLoading={options.categories.length === 0 || options.tags.length === 0}
     >
-      <Form.TextField
-        id="amount"
-        title="Amount"
-        placeholder="Enter amount"
-        defaultValue={data ? Math.abs(data.amount).toString() : ""}
-        ref={amountRef}
-      />
-      {categories.length > 0 ? (
-        <Form.Dropdown
-          id="category"
-          title="Category"
-          defaultValue={data?.category || categories.find((c) => c.name.startsWith("Food"))?.id}
-          ref={categoryRef}
-        >
-          {categories.map((category) => (
-            <Form.Dropdown.Item key={category.id} value={category.id} title={category.name} />
-          ))}
-        </Form.Dropdown>
-      ) : null}
-      {tags.length > 0 ? (
-        <Form.TagPicker id="tags" title="Tags" defaultValue={data?.tags} ref={tagsRef}>
-          {tags.map((tag) => (
-            <Form.TagPicker.Item key={tag.id} value={tag.id} title={tag.name} />
-          ))}
-        </Form.TagPicker>
-      ) : null}
-      <Form.TextArea
-        id="desc"
-        title="Description"
-        placeholder="Enter description"
-        defaultValue={data?.desc}
-        ref={descRef}
-      />
-      {categories.length > 0 || tags.length > 0 ? (
-        <Form.DatePicker
-          id="date"
-          title="Date"
-          defaultValue={data ? new Date(data.date) : new Date()}
-          type={Form.DatePicker.Type.Date}
-        />
+      {options.categories.length > 0 && options.tags.length > 0 ? (
+        <>
+          <Form.TextField
+            id="amount"
+            title="Amount"
+            placeholder="Enter amount"
+            defaultValue={data ? Math.abs(data.amount).toString() : ""}
+            ref={amountRef}
+          />
+          <Form.Dropdown
+            id="category"
+            title="Category"
+            defaultValue={data?.category || options.categories.find((c) => c.name.startsWith("Food"))?.id}
+            ref={categoryRef}
+          >
+            {options.categories.map((category) => (
+              <Form.Dropdown.Item key={category.id} value={category.id} title={category.name} />
+            ))}
+          </Form.Dropdown>
+          <Form.TagPicker id="tags" title="Tags" defaultValue={data?.tags} ref={tagsRef}>
+            {options.tags.map((tag) => (
+              <Form.TagPicker.Item key={tag.id} value={tag.id} title={tag.name} />
+            ))}
+          </Form.TagPicker>
+          <Form.TextArea
+            id="desc"
+            title="Description"
+            placeholder="Enter description"
+            defaultValue={data?.desc}
+            ref={descRef}
+          />
+          <Form.DatePicker
+            id="date"
+            title="Date"
+            defaultValue={data ? new Date(data.date) : new Date()}
+            type={Form.DatePicker.Type.Date}
+          />
+        </>
       ) : null}
     </Form>
   );
