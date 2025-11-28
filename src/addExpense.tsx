@@ -144,7 +144,12 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
               <Form.Dropdown.Item key={category.id} value={category.id} title={category.name} />
             ))}
           </Form.Dropdown>
-          <Form.TagPicker id="tags" title="Tags" defaultValue={data?.tags} ref={tagsRef}>
+          <Form.TagPicker
+            id="tags"
+            title="Tags"
+            defaultValue={data?.tags || options.tags.filter((tag) => tag.name === "Dating").map((tag) => tag.id)}
+            ref={tagsRef}
+          >
             {options.tags.map((tag) => (
               <Form.TagPicker.Item key={tag.id} value={tag.id} title={tag.name} />
             ))}
