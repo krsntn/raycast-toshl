@@ -9,7 +9,7 @@ import {
   LocalStorage,
 } from "@raycast/api";
 import { useForm, FormValidation } from "@raycast/utils";
-import { Entry, Category, Tag, getCategories, getTags } from "./utils/helper";
+import { Entry, getCategories, getTags } from "./utils/helper";
 import { useEffect, useRef, useState } from "react";
 
 interface AddExpenseFormValues {
@@ -20,9 +20,14 @@ interface AddExpenseFormValues {
   date: string;
 }
 
+type Option = { id: string; name: string };
+
+const toOptions = (items: Option[]) => items.map(({ id, name }) => ({ id, name }));
+const toKey = (items: Option[]) => JSON.stringify([...items].sort((a, b) => a.id.localeCompare(b.id)));
+
 export default function AddExpense({ data }: { data?: Entry | undefined }) {
   const { pop } = useNavigation();
-  const [options, setOptions] = useState<{ categories: Category[]; tags: Tag[] }>({ categories: [], tags: [] });
+  const [options, setOptions] = useState<{ categories: Option[]; tags: Option[] }>({ categories: [], tags: [] });
 
   const amountRef = useRef<Form.TextField>(null);
   const categoryRef = useRef<Form.Dropdown>(null);
@@ -36,22 +41,31 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
         LocalStorage.getItem<string>("tags"),
       ]);
 
-      setOptions({
-        categories: JSON.parse(cachedCategories ?? "[]"),
-        tags: JSON.parse(cachedTags ?? "[]"),
-      });
+      const cached = {
+        categories: toOptions(JSON.parse(cachedCategories ?? "[]")),
+        tags: toOptions(JSON.parse(cachedTags ?? "[]")),
+      };
+      setOptions(cached);
+      return cached;
+    };
+
+    const fetchData = async () => {
+      const [categories, tags] = await Promise.all([getCategories(), getTags()]);
+      return { categories: toOptions(categories), tags: toOptions(tags) };
     };
 
     const syncData = async () => {
       try {
-        const [categories, tags] = await Promise.all([getCategories(), getTags()]);
+        const [cached, fresh] = await Promise.all([loadCachedData(), fetchData()]);
 
-        setOptions({
-          categories,
-          tags,
-        });
-        await LocalStorage.setItem("categories", JSON.stringify(categories));
-        await LocalStorage.setItem("tags", JSON.stringify(tags));
+        // Re-rendering while the user types drops keystrokes, so skip it when nothing changed.
+        if (toKey(cached.categories) === toKey(fresh.categories) && toKey(cached.tags) === toKey(fresh.tags)) {
+          return;
+        }
+
+        setOptions(fresh);
+        await LocalStorage.setItem("categories", JSON.stringify(fresh.categories));
+        await LocalStorage.setItem("tags", JSON.stringify(fresh.tags));
       } catch (error) {
         showToast({
           style: Toast.Style.Failure,
@@ -60,7 +74,6 @@ export default function AddExpense({ data }: { data?: Entry | undefined }) {
       }
     };
 
-    loadCachedData();
     syncData();
   }, []);
 
