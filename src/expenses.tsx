@@ -22,8 +22,10 @@ export default function Command() {
     ]);
     setCategories(categories);
     setTags(tags);
-    const data = (await response.json()) as Entry[];
-    const dates = Array.from(new Set(data.map((entry) => entry.date)));
+    const data = ((await response.json()) as Entry[]).sort(
+      (a, b) => (b.created ? Date.parse(b.created) : 0) - (a.created ? Date.parse(a.created) : 0),
+    );
+    const dates = Array.from(new Set(data.map((entry) => entry.date))).sort((a, b) => b.localeCompare(a));
 
     setData(
       dates.map((d: string) => ({
